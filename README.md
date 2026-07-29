@@ -1,5 +1,10 @@
 # Pulse — an open-source, Whoop-style readiness tracker for the Fitbit Air
 
+[![tests](https://github.com/Luraxx/pulse/actions/workflows/tests.yml/badge.svg)](https://github.com/Luraxx/pulse/actions/workflows/tests.yml)
+[![license](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+![platform](https://img.shields.io/badge/platform-iOS%2017%2B-lightgrey)
+![swift](https://img.shields.io/badge/Swift-5.9-orange)
+
 Pulse is a private iOS app that reads your **Google Fitbit Air** data through the
 new **Google Health API** and turns it into daily readiness metrics — recovery,
 strain, sleep and a biological "Pulse Age". Everything is computed on device
@@ -18,6 +23,10 @@ against your own baseline. No server, no subscription, no tracking.
 </p>
 
 <p align="center"><sub>Today · Pulse Age & strain · Trends · Health monitor · Customizable layout — English & German, light/dark.</sub></p>
+
+> **No Fitbit at hand? Just want a look?** Build it and tap **Demo mode** on the
+> welcome screen: 120 days of realistic sample data, no Google account, no setup.
+> That is what the screenshots above show.
 
 ## What it does
 
@@ -112,25 +121,19 @@ cd SelfTest && swift run pulse-selftest
 
 ## Contributing
 
-This is a personal hobby project, shared in the hope it's useful — and **feedback is
+This is a personal hobby project, shared in the hope it's useful, and **feedback is
 genuinely welcome**. It's early, so you *will* find rough edges.
 
-**Found a bug or a number that looks wrong?** Please [open an issue](../../issues/new).
-Helpful things to include:
+**Found a bug or a number that looks wrong?**
+[Open an issue](../../issues/new/choose). A screenshot helps, and for sync problems the
+matching line from the in-app **sync log** (*More → Sync log*) usually pins down the fix
+on its own.
 
-- What you expected vs. what you saw (a screenshot says a lot).
-- If a metric fails to sync: the relevant line from the in-app **sync log**
-  (*More → Sync log*). The Google Health API is new (v4) and some data-type names
-  aren't final — a single error line is often enough to pin down the fix.
-- Your iOS version.
+**Pull requests** are welcome too. Run the self-tests first
+(`cd SelfTest && swift run pulse-selftest`); CI runs the same command on every push.
 
-**Pull requests** are welcome too. Before opening one, run the self-tests
-(`cd SelfTest && swift run pulse-selftest`) — the whole metric core is covered by
-them, so they catch most regressions without needing Xcode. Keep the app **local and
-private**: no analytics, telemetry, accounts or server component, by design. By
-contributing you agree your changes are licensed under Apache-2.0.
-
-I may be slow to respond — it's a side project — but every report is read.
+Details, ground rules and what to include: [`CONTRIBUTING.md`](CONTRIBUTING.md).
+Release history: [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Disclaimer
 
