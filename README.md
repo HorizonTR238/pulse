@@ -60,7 +60,7 @@ missing data type never blocks the rest.
   an orientation, not a medical result.
 
 The full methodology, sources and the Google Health data-type mapping live in
-[`README.de.md`](README.de.md).
+[`SETUP.md`](SETUP.md).
 
 ## Build it
 
@@ -81,7 +81,7 @@ days of realistic sample data.
 > this repository — Pulse uses PKCE and stores nothing server-side. Every user
 > creates their own Google Cloud project and iOS OAuth client and stays subject to
 > Google's API terms. The one-time setup (project, scopes, iOS client id) is
-> documented step by step in [`README.de.md`](README.de.md).
+> documented step by step in [`SETUP.md`](SETUP.md).
 
 ## Project structure
 
@@ -142,7 +142,7 @@ I may be slow to respond — it's a side project — but every report is read.
   Health are trademarks of Google LLC. This project is independent and not
   affiliated with, endorsed by or sponsored by any of them. Product names are used
   purely descriptively. The metric methodology is built from publicly published
-  research (cited in [`README.de.md`](README.de.md)), not from any company's
+  research (cited in [`SETUP.md`](SETUP.md)), not from any company's
   proprietary algorithms.
 - **No warranty.** Provided "AS IS", without warranty of any kind (see the License).
 

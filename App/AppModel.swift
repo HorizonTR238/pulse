@@ -170,6 +170,10 @@ final class AppModel {
     private(set) var recoveryResults: [String: RecoveryResult] = [:]
     private(set) var ageResults: [String: AgeResult] = [:]
     private(set) var journalInsights: [FactorInsight] = []
+    /// Observabler Spiegel der Journal-Einträge. JournalStore ist eine normale
+    /// Klasse (nicht @Observable) — ohne diesen Spiegel würden Toggles in der
+    /// UI nicht sichtbar, weil SwiftUI keine Änderung mitbekommt.
+    private(set) var journalEntries: [String: JournalEntry] = [:]
 
     private let defaults = UserDefaults.standard
 
@@ -271,7 +275,9 @@ final class AppModel {
     // MARK: - Journal
 
     func journalEntry(for key: String) -> JournalEntry {
-        journal.entry(for: key)
+        // Aus dem observablen Spiegel lesen, nicht aus dem Store — sonst
+        // bemerkt SwiftUI die Änderung nach einem Toggle nicht.
+        journalEntries[key] ?? JournalEntry(date: key)
     }
 
     func toggleJournal(_ factor: JournalFactor, on key: String) {
@@ -281,6 +287,7 @@ final class AppModel {
     }
 
     private func recomputeJournalInsights() {
+        journalEntries = journal.entries
         let recoveryByDay = recoveryResults.mapValues { $0.score }
         journalInsights = JournalEngine.insights(entries: journal.entries, recoveryByDay: recoveryByDay)
     }
