@@ -189,6 +189,30 @@ public final class HealthAPIClient: @unchecked Sendable {
         filterField: String = "sample_time.physical_time",
         timeKeys: [String] = ["physicalTime", "startTime", "time", "endTime", "date"]
     ) async throws -> [SamplePoint] {
+        try await fetchSamplesDetailed(
+            type: type,
+            payloadKey: payloadKey,
+            valueKeys: valueKeys,
+            start: start,
+            end: end,
+            filterField: filterField,
+            timeKeys: timeKeys
+        ).samples
+    }
+
+    /// Wie `fetchSamples`, liefert zusätzlich die Zahl der **rohen** Datenpunkte.
+    /// Damit lässt sich im Sync-Protokoll unterscheiden, ob Google gar nichts
+    /// geliefert hat (rawCount 0) oder ob wir die Werte nicht dekodieren konnten
+    /// (rawCount > 0, samples leer → Feldname stimmt nicht).
+    public func fetchSamplesDetailed(
+        type: String,
+        payloadKey: String,
+        valueKeys: [String],
+        start: Date,
+        end: Date,
+        filterField: String = "sample_time.physical_time",
+        timeKeys: [String] = ["physicalTime", "startTime", "time", "endTime", "date"]
+    ) async throws -> (samples: [SamplePoint], rawCount: Int) {
         let points = try await fetchRawDataPoints(
             type: type,
             payloadKey: payloadKey,
@@ -196,7 +220,7 @@ public final class HealthAPIClient: @unchecked Sendable {
             start: start,
             end: end
         )
-        return points.compactMap { point -> SamplePoint? in
+        let samples = points.compactMap { point -> SamplePoint? in
             let payload = (point[payloadKey] as? [String: Any]) ?? point
             guard let value = JSONExtract.firstDouble(in: payload, keys: valueKeys),
                   let time = JSONExtract.firstDate(in: payload, keys: timeKeys),
@@ -206,6 +230,7 @@ public final class HealthAPIClient: @unchecked Sendable {
             return SamplePoint(time: time, value: value)
         }
         .sorted { $0.time < $1.time }
+        return (samples, points.count)
     }
 
     /// Tagesdatentypen (z.B. resting-heart-rate) → Werte je "yyyy-MM-dd".

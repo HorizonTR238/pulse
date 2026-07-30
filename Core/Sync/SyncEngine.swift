@@ -142,18 +142,24 @@ public final class SyncEngine: @unchecked Sendable {
         // Sample-Strom ODER als Tagesaggregat — erst Samples, dann Tages-Fallback.
         report("HRV laden…")
         do {
-            let samples = try await client.fetchSamples(
+            let result = try await client.fetchSamplesDetailed(
                 type: "heart-rate-variability",
                 payloadKey: "heartRateVariability",
                 valueKeys: ["rmssd", "rmssdMilliseconds", "milliseconds", "dailyRmssd", "value"],
                 start: windowStart.addingTimeInterval(-12 * 3600),
                 end: windowEnd
             )
-            let grouped = Self.groupByNight(samples)
+            let grouped = Self.groupByNight(result.samples)
             for (key, values) in grouped {
                 update(key) { $0.hrvRmssd = Stats.mean(values) }
             }
             if grouped.isEmpty {
+                // Wichtig für die Diagnose: kamen überhaupt Datenpunkte an?
+                // rawCount > 0 heißt, Google liefert HRV, wir lesen nur das
+                // Wertfeld falsch aus (dann gehören die Keys oben angepasst).
+                if result.rawCount > 0 {
+                    note("HRV", "\(result.rawCount) Datenpunkte empfangen, aber kein Wert lesbar – Feldname prüfen", error: true)
+                }
                 do {
                     let daily = try await client.fetchDailyValues(
                         type: "daily-heart-rate-variability",
@@ -165,12 +171,16 @@ public final class SyncEngine: @unchecked Sendable {
                     for (key, value) in daily {
                         update(key) { $0.hrvRmssd = value }
                     }
-                    note("HRV", "\(daily.count) Tage (Tagesaggregat)")
+                    if daily.isEmpty {
+                        note("HRV", "keine Daten – weder Samples (\(result.rawCount) Rohpunkte) noch Tageswerte", error: result.rawCount > 0)
+                    } else {
+                        note("HRV", "\(daily.count) Tage (Tagesaggregat)")
+                    }
                 } catch {
-                    note("HRV", "0 Samples; Tages-HRV nicht verfügbar: \(Self.describe(error))", error: true)
+                    note("HRV", "keine Samples (\(result.rawCount) Rohpunkte); Tages-HRV: \(Self.describe(error))", error: true)
                 }
             } else {
-                note("HRV", "\(samples.count) Samples, \(grouped.count) Nächte")
+                note("HRV", "\(result.samples.count) Samples, \(grouped.count) Nächte")
             }
         } catch {
             note("HRV", Self.describe(error), error: true)
