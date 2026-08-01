@@ -132,7 +132,12 @@ public enum RecoveryEngine {
 
         let final = Int(Stats.clamp(score, 1, 99).rounded())
         let zone: RecoveryZone = final >= 67 ? .green : (final >= 34 ? .yellow : .red)
-        let calibrating = !(hrvBaseline?.isReliable ?? false) || !(rhrBaseline?.isReliable ?? false)
+        // Kalibrierend nur bezogen auf Metriken, die überhaupt Daten liefern.
+        // Fehlt z. B. HRV komplett (liefert die API bei manchen Geräten nicht),
+        // darf das die Kalibrierung nicht für immer blockieren.
+        let hrvUncalibrated = today.hrvRmssd != nil && !(hrvBaseline?.isReliable ?? false)
+        let rhrUncalibrated = today.restingHR != nil && !(rhrBaseline?.isReliable ?? false)
+        let calibrating = hrvUncalibrated || rhrUncalibrated
 
         return RecoveryResult(
             dateKey: dateKey,

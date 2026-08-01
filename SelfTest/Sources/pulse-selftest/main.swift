@@ -513,6 +513,55 @@ let jReload = JournalStore(directory: tmpJournal)
 check(jReload.isSet(.alcohol, on: "2026-07-18"), "Journal übersteht Roundtrip")
 try? FileManager.default.removeItem(at: tmpJournal)
 
+// MARK: Schlafschuld (kein Zinseszins, Kappung pro Nacht)
+
+section("Schlafschuld")
+func debtNight(_ key: String, minutes: Double) -> DayRecord {
+    var r = DayRecord(date: key)
+    guard let dayStart = DayKey.date(from: key) else { return r }
+    let wake = dayStart.addingTimeInterval(7 * 3600)
+    let bed = wake.addingTimeInterval(-minutes * 60)
+    r.sleepSessions = [SleepSession(id: "debt-\(key)", start: bed, end: wake, minutesAsleep: minutes, minutesAwake: 0)]
+    return r
+}
+// Basis 456, kein Strain: 1. Nacht Katastrophe (60 min), dann exakt Basis, dann Basis+60.
+let debtDays: [String: DayRecord] = [
+    "2026-06-01": debtNight("2026-06-01", minutes: 60),
+    "2026-06-02": debtNight("2026-06-02", minutes: 456),
+    "2026-06-03": debtNight("2026-06-03", minutes: 516),
+]
+let debtAnalyses = SleepEngine.analyze(days: debtDays, config: SleepEngineConfig())
+check(abs((debtAnalyses["2026-06-01"]?.debtAfterMinutes ?? -1) - 180) < 0.01, "Katastrophen-Nacht: Zuwachs pro Nacht auf 180 min gekappt (nicht sofort Maximum)")
+check(abs((debtAnalyses["2026-06-02"]?.debtAfterMinutes ?? -1) - 180) < 0.01, "Exakt Basis geschlafen → Schuld bleibt konstant (kein Zinseszins)")
+check(abs((debtAnalyses["2026-06-03"]?.debtAfterMinutes ?? -1) - 120) < 0.01, "60 min Überschlafen → Schuld sinkt um 60")
+check((debtAnalyses["2026-06-02"]?.needMinutes ?? 0) > 456, "Angezeigter Bedarf enthält weiterhin die Schuld-Rückzahlung")
+
+// MARK: Recovery-Kalibrierung ohne HRV
+
+section("Recovery-Kalibrierung")
+func rhrOnly(_ key: String, rhr: Double) -> DayRecord {
+    var r = DayRecord(date: key)
+    r.restingHR = rhr
+    return r
+}
+let rhrHistory = (0..<10).map { rhrOnly(DayKey.addDays("2026-06-01", $0), rhr: 54 + Double($0 % 3)) }
+let noHrvResult = RecoveryEngine.compute(
+    dateKey: "2026-06-11",
+    today: rhrOnly("2026-06-11", rhr: 55),
+    history: rhrHistory,
+    sleepPerformance: 85
+)
+check(noHrvResult != nil, "Recovery ohne HRV berechenbar")
+check(noHrvResult?.calibrating == false, "Fehlendes HRV blockiert die Kalibrierung nicht (10 RHR-Nächte reichen)")
+let shortHistory = Array(rhrHistory.prefix(3))
+let earlyNoHrv = RecoveryEngine.compute(
+    dateKey: "2026-06-05",
+    today: rhrOnly("2026-06-05", rhr: 55),
+    history: shortHistory,
+    sleepPerformance: 85
+)
+check(earlyNoHrv?.calibrating == true, "Unter 5 RHR-Nächten kalibriert weiterhin")
+
 // MARK: Zubettgeh-Empfehlung
 
 section("Zubettgeh-Empfehlung")

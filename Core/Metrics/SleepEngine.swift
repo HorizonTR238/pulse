@@ -7,6 +7,10 @@ public struct SleepEngineConfig: Sendable {
     public var debtRepayFraction: Double
     /// Obergrenze der akkumulierten Schlafschuld.
     public var maxDebtMinutes: Double
+    /// Maximaler Schuld-ZUWACHS pro Nacht. Verhindert, dass eine einzelne
+    /// Katastrophen- oder Artefakt-Nacht (z. B. eine kurze Setup-Session am
+    /// ersten Tag) die Schuld auf einen Schlag maximiert.
+    public var maxDebtGainPerNightMinutes: Double
     /// Maximaler Bedarfs-Aufschlag durch hohen Vortages-Strain.
     public var strainNeedBoostMaxMinutes: Double
 
@@ -14,11 +18,13 @@ public struct SleepEngineConfig: Sendable {
         baselineNeedMinutes: Double = 456,
         debtRepayFraction: Double = 0.30,
         maxDebtMinutes: Double = 300,
+        maxDebtGainPerNightMinutes: Double = 180,
         strainNeedBoostMaxMinutes: Double = 45
     ) {
         self.baselineNeedMinutes = baselineNeedMinutes
         self.debtRepayFraction = debtRepayFraction
         self.maxDebtMinutes = maxDebtMinutes
+        self.maxDebtGainPerNightMinutes = maxDebtGainPerNightMinutes
         self.strainNeedBoostMaxMinutes = strainNeedBoostMaxMinutes
     }
 }
@@ -131,7 +137,15 @@ public enum SleepEngine {
             let performance = hasData ? min(100, slept / need * 100) : 0
 
             if hasData {
-                debt = Stats.clamp(debt + (need - slept), 0, config.maxDebtMinutes)
+                // Schuld wird gegen Basis + Strain-Aufschlag gebucht, NICHT
+                // gegen den angezeigten Bedarf: der enthält die Schuld-
+                // Rückzahlung, und daran gemessen würde die Schuld verzinst —
+                // wer genau seine Basis schläft, käme nie wieder von der
+                // Kappung herunter. (Whoop-Logik: zurückgezahlt ist, was ÜBER
+                // der Baseline geschlafen wird.)
+                let structuralNeed = config.baselineNeedMinutes + strainBoost
+                let delta = min(structuralNeed - slept, config.maxDebtGainPerNightMinutes)
+                debt = Stats.clamp(debt + delta, 0, config.maxDebtMinutes)
             }
 
             var consistency: Double?
