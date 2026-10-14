@@ -123,8 +123,16 @@ public enum SleepEngine {
 
         for key in DayKey.keys(from: first, to: last) {
             let record = days[key]
-            let sessions = record?.sleepSessions ?? []
+            let allSessions = record?.sleepSessions ?? []
             let main = record?.mainSleep
+            // Nur die Hauptsession und Sessions zählen, die sich zeitlich nicht
+            // mit ihr überschneiden. Verhindert Doppelzählung, wenn eine zweite
+            // Quelle (z. B. Whoop) dieselbe Nacht liefert.
+            let sessions = allSessions.filter { s in
+                guard let main else { return true }
+                if s.start == main.start && s.end == main.end { return true }
+                return s.end <= main.start || s.start >= main.end
+            }
             let slept = sessions.reduce(0) { $0 + $1.minutesAsleep }
             let napMinutes = slept - (main?.minutesAsleep ?? 0)
             let hasData = main != nil && slept > 0
